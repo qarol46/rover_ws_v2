@@ -8,6 +8,13 @@
 #include <cstring>
 #include <iostream>
 
+// Структура для передачи данных о состояниях колес
+struct wheel_state_message {
+  double wheel_speeds[6];    // Скорости колес (рад/с)
+  double wheel_positions[6]; // Позиции колес (рад)
+  uint8_t operating_mode;    // Режим работы
+};
+
 class Eth_Socket
 {
 public:
@@ -17,8 +24,11 @@ public:
   // Отправка целевых скоростей колес
   void SendWheelSpeeds(double wheel_speeds[6]);
 
-  // Получение текущих скоростей колес
+  // Получение текущих скоростей колес (для обратной совместимости)
   void GetWheelSpeeds(double wheel_speeds[6]);
+
+  // Получение текущих состояний (скоростей и позиций)
+  void GetWheelStates(double wheel_speeds[6], double wheel_positions[6]);
 
 private:
   int sock;  // Дескриптор сокета

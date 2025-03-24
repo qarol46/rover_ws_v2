@@ -1,16 +1,5 @@
 #include "ros2_control_wheeled_robot_hardware/udp_wheeled_robot.hpp"
 
-#include <iostream>
-#include <cstring>
-#include <unistd.h>
-#include <arpa/inet.h>
-
-// Структура для передачи данных о скоростях колес
-struct wheel_message {
-  double wheel_speeds[6];  // Скорости колес (в радианах/секунду)
-  uint8_t operating_mode;  // Режим работы
-};
-
 Eth_Socket::Eth_Socket()
 {
   // Создание UDP-сокета
@@ -20,8 +9,8 @@ Eth_Socket::Eth_Socket()
     exit(EXIT_FAILURE);
   }
 
-  // Настройка для приема данных с порта 5011 (127.0.0.1)
-  bzero(&cliaddr, sizeof(cliaddr));
+  // Настройка для приема данных
+  memset(&cliaddr, 0, sizeof(cliaddr));
   cliaddr.sin_family = AF_INET;
   cliaddr.sin_port = htons(5011);
   cliaddr.sin_addr.s_addr = inet_addr("127.0.0.1");
@@ -33,8 +22,8 @@ Eth_Socket::Eth_Socket()
     exit(EXIT_FAILURE);
   }
 
-  // Настройка для отправки данных на порт 5012 (127.0.0.1)
-  bzero(&servaddr, sizeof(servaddr));
+  // Настройка для отправки данных
+  memset(&servaddr, 0, sizeof(servaddr));
   servaddr.sin_family = AF_INET;
   servaddr.sin_port = htons(5012);
   servaddr.sin_addr.s_addr = inet_addr("127.0.0.1");
@@ -55,31 +44,38 @@ Eth_Socket::~Eth_Socket()
   }
 }
 
-// Функция отправки целевых скоростей колес
 void Eth_Socket::SendWheelSpeeds(double wheel_speeds[6])
 {
-  wheel_message wm;
-  memcpy(wm.wheel_speeds, wheel_speeds, sizeof(double) * 6);  // Исправлено
-  wm.operating_mode = 0x01;  // Пример режима работы
+  wheel_state_message wm;
+  memcpy(wm.wheel_speeds, wheel_speeds, sizeof(double) * 6);
+  wm.operating_mode = 0x01;
 
-  unsigned char w_pak[sizeof(wm)];
-  memcpy(w_pak, &wm, sizeof(wm));
-
-  if (sendto(sock, w_pak, sizeof(wm), MSG_CONFIRM, (struct sockaddr *)&servaddr, sizeof(servaddr)) < 0) {
+  if (sendto(sock, &wm, sizeof(wm), MSG_CONFIRM, 
+      (struct sockaddr *)&servaddr, sizeof(servaddr)) < 0) {
     perror("Send failed");
   }
 }
 
-// Функция получения текущих скоростей колес
 void Eth_Socket::GetWheelSpeeds(double wheel_speeds[6])
 {
-  unsigned char r_pak[sizeof(wheel_message)];
-  int received = recvfrom(sock, r_pak, sizeof(wheel_message), MSG_WAITALL, (struct sockaddr *)NULL, NULL);
+  double dummy_positions[6];
+  GetWheelStates(wheel_speeds, dummy_positions);
+}
 
-  if (received > 0) {
-    wheel_message wm = *reinterpret_cast<wheel_message *>(r_pak);
+void Eth_Socket::GetWheelStates(double wheel_speeds[6], double wheel_positions[6])
+{
+  wheel_state_message wm;
+  socklen_t len = sizeof(cliaddr);
+  
+  int received = recvfrom(sock, &wm, sizeof(wm), MSG_WAITALL,
+                     (struct sockaddr *)&cliaddr, &len);
+
+  if (received == sizeof(wm)) {
     memcpy(wheel_speeds, wm.wheel_speeds, sizeof(wm.wheel_speeds));
+    memcpy(wheel_positions, wm.wheel_positions, sizeof(wm.wheel_positions));
   } else {
-    perror("Receive failed");
+    perror("Receive failed or incomplete data");
+    memset(wheel_speeds, 0, sizeof(double) * 6);
+    memset(wheel_positions, 0, sizeof(double) * 6);
   }
 }

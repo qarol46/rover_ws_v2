@@ -35,6 +35,7 @@ private:
   std::unique_ptr<Eth_Socket> udp_socket_;
 
   // Векторы для хранения состояний и команд
+  std::vector<double> hw_positions_; 
   std::vector<double> hw_velocities_;  // Текущие скорости колес
   std::vector<double> hw_commands_;    // Целевые скорости колес
 };
