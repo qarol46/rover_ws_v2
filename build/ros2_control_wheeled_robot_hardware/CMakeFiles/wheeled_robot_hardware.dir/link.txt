@@ -1,0 +1,2 @@
+/usr/bin/ar qc libwheeled_robot_hardware.a CMakeFiles/wheeled_robot_hardware.dir/src/wheeled_robot_hardware.cpp.o CMakeFiles/wheeled_robot_hardware.dir/src/udp_wheeled_robot.cpp.o
+/usr/bin/ranlib libwheeled_robot_hardware.a
